@@ -14,6 +14,7 @@ import { useTheme } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useToilData } from '@/hooks/useToilData';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { formatMinutes, snapToFiveMinutes } from '@/types/toil';
 import { colors } from '@/styles/commonStyles';
 
@@ -24,6 +25,7 @@ export default function LoggingScreen() {
   const themeColors = isDark ? colors.dark : colors.light;
 
   const { balance, lastAction, addEvent, deleteEvent } = useToilData();
+  const { isListening, transcript, error: speechError, startListening, stopListening, resetTranscript } = useSpeechToText();
   
   const [actionType, setActionType] = useState<'ADD' | 'TAKE'>(lastAction);
   const [selectedMinutes, setSelectedMinutes] = useState(30);
@@ -36,11 +38,45 @@ export default function LoggingScreen() {
   const [lastSubmitTime, setLastSubmitTime] = useState(0);
 
   const snackbarAnim = useRef(new Animated.Value(0)).current;
+  const micPulseAnim = useRef(new Animated.Value(1)).current;
 
   // Update action type when lastAction changes
   useEffect(() => {
     setActionType(lastAction);
   }, [lastAction]);
+
+  // Update note when transcript changes
+  useEffect(() => {
+    if (transcript) {
+      setNote(prev => {
+        const newNote = prev ? `${prev} ${transcript}` : transcript;
+        return newNote.trim();
+      });
+      resetTranscript();
+    }
+  }, [transcript, resetTranscript]);
+
+  // Animate microphone when listening
+  useEffect(() => {
+    if (isListening) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(micPulseAnim, {
+            toValue: 1.3,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(micPulseAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      micPulseAnim.setValue(1);
+    }
+  }, [isListening, micPulseAnim]);
 
   // Quick time buttons (in minutes)
   const quickTimes = [15, 30, 45, 60, 90, 120];
@@ -64,6 +100,23 @@ export default function LoggingScreen() {
     setSelectedMinutes(snappedMinutes);
   };
 
+  const handleMicPress = async () => {
+    console.log('User tapped microphone button');
+    
+    if (isListening) {
+      console.log('Stopping speech recognition');
+      stopListening();
+    } else {
+      console.log('Starting speech recognition');
+      try {
+        await startListening();
+      } catch (err) {
+        console.error('Failed to start speech recognition:', err);
+        // Silently fail - user can still type manually
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     const now = Date.now();
     
@@ -79,6 +132,11 @@ export default function LoggingScreen() {
     if (selectedMinutes === 0) {
       console.log('Cannot submit 0 minutes');
       return;
+    }
+
+    // Stop listening if still active
+    if (isListening) {
+      stopListening();
     }
 
     try {
@@ -130,6 +188,7 @@ export default function LoggingScreen() {
   const buttonColor = actionType === 'ADD' ? themeColors.success : themeColors.warning;
 
   const snackbarMessage = `TOIL updated · Balance ${balanceDisplay}`;
+  const micIconColor = isListening ? themeColors.success : themeColors.primary;
 
   return (
     <>
@@ -304,19 +363,28 @@ export default function LoggingScreen() {
             />
             <TouchableOpacity
               style={styles.micButton}
-              onPress={() => {
-                console.log('User tapped microphone button');
-                // TODO: Implement speech-to-text
-              }}
+              onPress={handleMicPress}
+              activeOpacity={0.7}
             >
-              <IconSymbol
-                ios_icon_name="mic.fill"
-                android_material_icon_name="mic"
-                size={24}
-                color={themeColors.primary}
-              />
+              <Animated.View style={{ transform: [{ scale: micPulseAnim }] }}>
+                <IconSymbol
+                  ios_icon_name={isListening ? 'mic.fill' : 'mic.fill'}
+                  android_material_icon_name={isListening ? 'mic' : 'mic'}
+                  size={24}
+                  color={micIconColor}
+                />
+              </Animated.View>
             </TouchableOpacity>
           </View>
+
+          {/* Listening indicator */}
+          {isListening && (
+            <View style={styles.listeningIndicator}>
+              <Text style={[styles.listeningText, { color: themeColors.success }]}>
+                Listening...
+              </Text>
+            </View>
+          )}
 
           {/* Submit Button */}
           <TouchableOpacity
@@ -478,7 +546,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginBottom: 24,
+    marginBottom: 8,
   },
   noteInput: {
     flex: 1,
@@ -487,6 +555,14 @@ const styles = StyleSheet.create({
   },
   micButton: {
     padding: 8,
+  },
+  listeningIndicator: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  listeningText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   submitButton: {
     paddingVertical: 18,

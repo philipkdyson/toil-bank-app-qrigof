@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "TOIL Bank",
@@ -16,7 +17,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.Natively",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSSpeechRecognitionUsageDescription": "TOIL Bank uses speech recognition to convert your spoken notes into text.",
+        "NSMicrophoneUsageDescription": "TOIL Bank needs access to your microphone for speech-to-text functionality."
       }
     },
     "android": {
@@ -25,7 +28,10 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Natively"
+      "package": "com.anonymous.Natively",
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",
@@ -34,7 +40,8 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withSpeechRecognition"
     ],
     "scheme": "TOIL Bank",
     "experiments": {
