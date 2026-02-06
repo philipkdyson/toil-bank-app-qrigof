@@ -1,7 +1,8 @@
 import type { App } from '../index.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
+import * as authSchema from '../db/auth-schema.js';
 
 interface ToilEventInput {
   timestamp: string; // ISO 8601
@@ -16,7 +17,35 @@ interface ToilEventResponse {
   type: 'ADD' | 'TAKE';
   minutes: number;
   note: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approved_by: string | null;
+  approval_timestamp: string | null;
   created_at: string;
+}
+
+interface PendingEventResponse {
+  id: string;
+  timestamp: string;
+  type: 'ADD' | 'TAKE';
+  minutes: number;
+  note: string | null;
+  created_at: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+
+interface ApprovalResponse {
+  id: string;
+  timestamp: string;
+  type: 'ADD' | 'TAKE';
+  minutes: number;
+  note: string | null;
+  created_at: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approved_by: string | null;
+  approval_timestamp: string | null;
 }
 
 interface BalanceResponse {
@@ -51,6 +80,9 @@ export function registerToilRoutes(app: App) {
           type: event.type as 'ADD' | 'TAKE',
           minutes: event.minutes,
           note: event.note,
+          status: event.status as 'PENDING' | 'APPROVED' | 'REJECTED',
+          approved_by: event.approvedBy || null,
+          approval_timestamp: event.approvalTimestamp ? event.approvalTimestamp.toISOString() : null,
           created_at: event.createdAt.toISOString(),
         }));
 
@@ -111,6 +143,7 @@ export function registerToilRoutes(app: App) {
             minutes,
             note: note || null,
             userId,
+            status: 'PENDING',
           })
           .returning();
 
@@ -120,6 +153,9 @@ export function registerToilRoutes(app: App) {
           type: event.type as 'ADD' | 'TAKE',
           minutes: event.minutes,
           note: event.note,
+          status: event.status as 'PENDING' | 'APPROVED' | 'REJECTED',
+          approved_by: event.approvedBy || null,
+          approval_timestamp: event.approvalTimestamp ? event.approvalTimestamp.toISOString() : null,
           created_at: event.createdAt.toISOString(),
         };
 
@@ -276,6 +312,9 @@ export function registerToilRoutes(app: App) {
           type: updatedEvent.type as 'ADD' | 'TAKE',
           minutes: updatedEvent.minutes,
           note: updatedEvent.note,
+          status: updatedEvent.status as 'PENDING' | 'APPROVED' | 'REJECTED',
+          approved_by: updatedEvent.approvedBy || null,
+          approval_timestamp: updatedEvent.approvalTimestamp ? updatedEvent.approvalTimestamp.toISOString() : null,
           created_at: updatedEvent.createdAt.toISOString(),
         };
 
@@ -308,7 +347,12 @@ export function registerToilRoutes(app: App) {
         const events = await app.db
           .select()
           .from(schema.toilEvents)
-          .where(eq(schema.toilEvents.userId, userId));
+          .where(
+            and(
+              eq(schema.toilEvents.userId, userId),
+              eq(schema.toilEvents.status, 'APPROVED')
+            )
+          );
 
         let addMinutes = 0;
         let takeMinutes = 0;
@@ -336,6 +380,214 @@ export function registerToilRoutes(app: App) {
         return response;
       } catch (error) {
         app.logger.error({ err: error, userId }, 'Failed to calculate TOIL balance');
+        throw error;
+      }
+    }
+  );
+
+  // GET /api/toil/events/pending - Get all pending TOIL events (manager only)
+  app.fastify.get<{ Reply: PendingEventResponse[] }>(
+    '/api/toil/events/pending',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const session = await requireAuth(request, reply);
+      if (!session) return;
+
+      const userId = session.user.id;
+      app.logger.info({ userId }, 'Fetching pending TOIL events');
+
+      try {
+        // Check if user is manager
+        const user = await app.db.query.user.findFirst({
+          where: eq(authSchema.user.id, userId),
+        });
+
+        if (!user || user.role !== 'manager') {
+          app.logger.warn({ userId }, 'Unauthorized: user is not a manager');
+          return reply.code(403).send({ error: 'Only managers can view pending events' });
+        }
+
+        // Get all pending events with user information
+        const events = await app.db
+          .select({
+            id: schema.toilEvents.id,
+            timestamp: schema.toilEvents.timestamp,
+            type: schema.toilEvents.type,
+            minutes: schema.toilEvents.minutes,
+            note: schema.toilEvents.note,
+            createdAt: schema.toilEvents.createdAt,
+            userId: schema.toilEvents.userId,
+            status: schema.toilEvents.status,
+            userName: authSchema.user.name,
+            userEmail: authSchema.user.email,
+          })
+          .from(schema.toilEvents)
+          .innerJoin(authSchema.user, eq(schema.toilEvents.userId, authSchema.user.id))
+          .where(eq(schema.toilEvents.status, 'PENDING'))
+          .orderBy(desc(schema.toilEvents.timestamp));
+
+        const formattedEvents: PendingEventResponse[] = events.map((event) => ({
+          id: event.id,
+          timestamp: event.timestamp.toISOString(),
+          type: event.type as 'ADD' | 'TAKE',
+          minutes: event.minutes,
+          note: event.note,
+          created_at: event.createdAt.toISOString(),
+          user_id: event.userId,
+          user_name: event.userName,
+          user_email: event.userEmail,
+          status: event.status as 'PENDING' | 'APPROVED' | 'REJECTED',
+        }));
+
+        app.logger.info({ userId, count: formattedEvents.length }, 'Pending TOIL events fetched');
+        return formattedEvents;
+      } catch (error) {
+        app.logger.error({ err: error, userId }, 'Failed to fetch pending TOIL events');
+        throw error;
+      }
+    }
+  );
+
+  // PUT /api/toil/events/:id/approve - Approve a TOIL event (manager only)
+  app.fastify.put<{ Params: { id: string }; Reply: ApprovalResponse }>(
+    '/api/toil/events/:id/approve',
+    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      const session = await requireAuth(request, reply);
+      if (!session) return;
+
+      const managerId = session.user.id;
+      const { id } = request.params as { id: string };
+
+      app.logger.info({ managerId, eventId: id }, 'Approving TOIL event');
+
+      try {
+        // Check if user is manager
+        const manager = await app.db.query.user.findFirst({
+          where: eq(authSchema.user.id, managerId),
+        });
+
+        if (!manager || manager.role !== 'manager') {
+          app.logger.warn({ managerId }, 'Unauthorized: user is not a manager');
+          return reply.code(403).send({ error: 'Only managers can approve events' });
+        }
+
+        // Get the event
+        const event = await app.db.query.toilEvents.findFirst({
+          where: eq(schema.toilEvents.id, id),
+        });
+
+        if (!event) {
+          app.logger.warn({ managerId, eventId: id }, 'TOIL event not found');
+          return reply.code(404).send({ error: 'TOIL event not found' });
+        }
+
+        // Update event status to APPROVED
+        const [approvedEvent] = await app.db
+          .update(schema.toilEvents)
+          .set({
+            status: 'APPROVED',
+            approvedBy: managerId,
+            approvalTimestamp: new Date(),
+          })
+          .where(eq(schema.toilEvents.id, id))
+          .returning();
+
+        const response: ApprovalResponse = {
+          id: approvedEvent.id,
+          timestamp: approvedEvent.timestamp.toISOString(),
+          type: approvedEvent.type as 'ADD' | 'TAKE',
+          minutes: approvedEvent.minutes,
+          note: approvedEvent.note,
+          created_at: approvedEvent.createdAt.toISOString(),
+          status: approvedEvent.status as 'PENDING' | 'APPROVED' | 'REJECTED',
+          approved_by: approvedEvent.approvedBy || null,
+          approval_timestamp: approvedEvent.approvalTimestamp
+            ? approvedEvent.approvalTimestamp.toISOString()
+            : null,
+        };
+
+        app.logger.info(
+          { managerId, eventId: id, status: 'APPROVED' },
+          'TOIL event approved successfully'
+        );
+        return response;
+      } catch (error) {
+        app.logger.error(
+          { err: error, managerId, eventId: id },
+          'Failed to approve TOIL event'
+        );
+        throw error;
+      }
+    }
+  );
+
+  // PUT /api/toil/events/:id/reject - Reject a TOIL event (manager only)
+  app.fastify.put<{ Params: { id: string }; Reply: ApprovalResponse }>(
+    '/api/toil/events/:id/reject',
+    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      const session = await requireAuth(request, reply);
+      if (!session) return;
+
+      const managerId = session.user.id;
+      const { id } = request.params as { id: string };
+
+      app.logger.info({ managerId, eventId: id }, 'Rejecting TOIL event');
+
+      try {
+        // Check if user is manager
+        const manager = await app.db.query.user.findFirst({
+          where: eq(authSchema.user.id, managerId),
+        });
+
+        if (!manager || manager.role !== 'manager') {
+          app.logger.warn({ managerId }, 'Unauthorized: user is not a manager');
+          return reply.code(403).send({ error: 'Only managers can reject events' });
+        }
+
+        // Get the event
+        const event = await app.db.query.toilEvents.findFirst({
+          where: eq(schema.toilEvents.id, id),
+        });
+
+        if (!event) {
+          app.logger.warn({ managerId, eventId: id }, 'TOIL event not found');
+          return reply.code(404).send({ error: 'TOIL event not found' });
+        }
+
+        // Update event status to REJECTED
+        const [rejectedEvent] = await app.db
+          .update(schema.toilEvents)
+          .set({
+            status: 'REJECTED',
+            approvedBy: managerId,
+            approvalTimestamp: new Date(),
+          })
+          .where(eq(schema.toilEvents.id, id))
+          .returning();
+
+        const response: ApprovalResponse = {
+          id: rejectedEvent.id,
+          timestamp: rejectedEvent.timestamp.toISOString(),
+          type: rejectedEvent.type as 'ADD' | 'TAKE',
+          minutes: rejectedEvent.minutes,
+          note: rejectedEvent.note,
+          created_at: rejectedEvent.createdAt.toISOString(),
+          status: rejectedEvent.status as 'PENDING' | 'APPROVED' | 'REJECTED',
+          approved_by: rejectedEvent.approvedBy || null,
+          approval_timestamp: rejectedEvent.approvalTimestamp
+            ? rejectedEvent.approvalTimestamp.toISOString()
+            : null,
+        };
+
+        app.logger.info(
+          { managerId, eventId: id, status: 'REJECTED' },
+          'TOIL event rejected successfully'
+        );
+        return response;
+      } catch (error) {
+        app.logger.error(
+          { err: error, managerId, eventId: id },
+          'Failed to reject TOIL event'
+        );
         throw error;
       }
     }
