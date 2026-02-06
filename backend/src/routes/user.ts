@@ -33,6 +33,11 @@ interface PromoteUserResponse {
   };
 }
 
+interface ToggleRoleResponse {
+  success: boolean;
+  role: 'user' | 'manager';
+}
+
 export function registerUserRoutes(app: App) {
   const requireAuth = app.requireAuth();
 
@@ -204,6 +209,54 @@ export function registerUserRoutes(app: App) {
           { err: error, body: request.body },
           'Failed to promote user'
         );
+        throw error;
+      }
+    }
+  );
+
+  // PUT /api/user/toggle-role - Toggle current user's role between user and manager
+  // Development/testing endpoint to allow users to toggle their own role
+  app.fastify.put<{ Reply: ToggleRoleResponse }>(
+    '/api/user/toggle-role',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const session = await requireAuth(request, reply);
+      if (!session) return;
+
+      const userId = session.user.id;
+      app.logger.info({ userId }, 'Toggling user role');
+
+      try {
+        // Get current user
+        const user = await app.db.query.user.findFirst({
+          where: eq(authSchema.user.id, userId),
+        });
+
+        if (!user) {
+          app.logger.warn({ userId }, 'User not found');
+          return reply.code(404).send({ error: 'User not found' });
+        }
+
+        // Determine new role
+        const newRole = user.role === 'manager' ? 'user' : 'manager';
+
+        // Update user role
+        await app.db
+          .update(authSchema.user)
+          .set({ role: newRole })
+          .where(eq(authSchema.user.id, userId));
+
+        const response: ToggleRoleResponse = {
+          success: true,
+          role: newRole as 'user' | 'manager',
+        };
+
+        app.logger.info(
+          { userId, previousRole: user.role, newRole },
+          'User role toggled successfully'
+        );
+        return response;
+      } catch (error) {
+        app.logger.error({ err: error, userId }, 'Failed to toggle user role');
         throw error;
       }
     }
