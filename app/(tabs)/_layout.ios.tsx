@@ -22,38 +22,43 @@ export default function TabLayout() {
           height: 88,
           paddingBottom: 32,
           paddingTop: 8,
+          backgroundColor: colorScheme === 'dark' ? 'rgba(28, 28, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          marginTop: 2,
+          fontSize: 12,
+          marginTop: 4,
+          fontWeight: '500',
+        },
+        tabBarIconStyle: {
+          marginTop: 4,
         },
       }}>
       <Tabs.Screen
-        name="index"
+        name="(home)"
         options={{
           title: 'Log',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="plus" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol android_material_icon_name="add" ios_icon_name="plus" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: 'History',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="clock" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol android_material_icon_name="history" ios_icon_name="clock" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="approvals"
         options={{
           title: 'Approvals',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="checkmark" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol android_material_icon_name="check-circle" ios_icon_name="checkmark.circle" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol android_material_icon_name="person" ios_icon_name="person" size={26} color={color} />,
         }}
       />
     </Tabs>
