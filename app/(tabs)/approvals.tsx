@@ -32,38 +32,50 @@ export default function ApprovalsScreen() {
   const [loading, setLoading] = useState(true);
   const [isManager, setIsManager] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('ApprovalsScreen: Checking user role and loading pending events');
-    checkUserRole();
-    loadPendingEvents();
+    console.log('ApprovalsScreen: Component mounted, initializing...');
+    loadData();
   }, []);
 
-  const checkUserRole = async () => {
+  const loadData = async () => {
+    console.log('ApprovalsScreen: Starting data load...');
+    setLoading(true);
+    setError(null);
+    
     try {
-      console.log('ApprovalsScreen: Fetching user role');
-      const response = await authenticatedGet<{ role: string }>('/api/user/role');
-      const userIsManager = response.role === 'manager';
+      // First check if user is a manager
+      console.log('ApprovalsScreen: Checking user role...');
+      const roleResponse = await authenticatedGet<{ role: string }>('/api/user/role');
+      console.log('ApprovalsScreen: Role response:', roleResponse);
+      
+      const userIsManager = roleResponse.role === 'manager';
       setIsManager(userIsManager);
-      console.log('ApprovalsScreen: User role:', response.role, 'isManager:', userIsManager);
-    } catch (error) {
-      console.error('ApprovalsScreen: Failed to check user role:', error);
-      setIsManager(false);
-    }
-  };
+      console.log('ApprovalsScreen: User is manager:', userIsManager);
 
-  const loadPendingEvents = async () => {
-    try {
-      console.log('ApprovalsScreen: Loading pending events');
-      setLoading(true);
+      if (!userIsManager) {
+        console.log('ApprovalsScreen: User is not a manager, skipping event load');
+        setLoading(false);
+        return;
+      }
+
+      // If manager, load pending events
+      console.log('ApprovalsScreen: Loading pending events...');
       const events = await authenticatedGet<PendingToilEvent[]>('/api/toil/events/pending');
-      console.log('ApprovalsScreen: Loaded pending events:', events.length);
+      console.log('ApprovalsScreen: Received events:', events.length, 'events');
+      console.log('ApprovalsScreen: First event sample:', events[0]);
+      
       setPendingEvents(events);
-    } catch (error) {
-      console.error('ApprovalsScreen: Failed to load pending events:', error);
+      console.log('ApprovalsScreen: State updated with', events.length, 'events');
+    } catch (err) {
+      console.error('ApprovalsScreen: Error loading data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setIsManager(false);
       setPendingEvents([]);
     } finally {
       setLoading(false);
+      console.log('ApprovalsScreen: Loading complete');
     }
   };
 
@@ -78,6 +90,7 @@ export default function ApprovalsScreen() {
       setPendingEvents(prev => prev.filter(e => e.id !== eventId));
     } catch (error) {
       console.error('ApprovalsScreen: Failed to approve event:', error);
+      setError('Failed to approve event');
     } finally {
       setProcessingId(null);
     }
@@ -94,12 +107,14 @@ export default function ApprovalsScreen() {
       setPendingEvents(prev => prev.filter(e => e.id !== eventId));
     } catch (error) {
       console.error('ApprovalsScreen: Failed to reject event:', error);
+      setError('Failed to reject event');
     } finally {
       setProcessingId(null);
     }
   };
 
   const groupEventsByDate = (): EventSection[] => {
+    console.log('ApprovalsScreen: Grouping', pendingEvents.length, 'events by date');
     const grouped = new Map<string, PendingToilEvent[]>();
 
     pendingEvents.forEach(event => {
@@ -115,6 +130,7 @@ export default function ApprovalsScreen() {
       sections.push({ title, data });
     });
 
+    console.log('ApprovalsScreen: Created', sections.length, 'sections');
     return sections;
   };
 
@@ -226,6 +242,13 @@ export default function ApprovalsScreen() {
     );
   };
 
+  console.log('ApprovalsScreen: Rendering with state:', {
+    loading,
+    isManager,
+    pendingEventsCount: pendingEvents.length,
+    error,
+  });
+
   const sections = groupEventsByDate();
   const pendingCount = pendingEvents.length;
   const headerTitle = isManager ? 'Pending Approvals' : 'Approvals';
@@ -249,6 +272,29 @@ export default function ApprovalsScreen() {
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Loading...
           </Text>
+        </View>
+      ) : error ? (
+        <View style={styles.centerContainer}>
+          <IconSymbol
+            ios_icon_name="exclamationmark.triangle.fill"
+            android_material_icon_name="error"
+            size={64}
+            color={colors.error}
+          />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            Error Loading Data
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+            {error}
+          </Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={loadData}
+          >
+            <Text style={[styles.retryButtonText, { color: colors.primary }]}>
+              Retry
+            </Text>
+          </TouchableOpacity>
         </View>
       ) : !isManager ? (
         <View style={styles.centerContainer}>
@@ -318,6 +364,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 8,
     textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   listContent: {
     paddingBottom: 100,
