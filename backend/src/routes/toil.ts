@@ -52,6 +52,9 @@ interface BalanceResponse {
   balance: number;
   addMinutes: number;
   takeMinutes: number;
+  availableBalance: number;
+  availableAddMinutes: number;
+  availableTakeMinutes: number;
 }
 
 export function registerToilRoutes(app: App) {
@@ -344,7 +347,18 @@ export function registerToilRoutes(app: App) {
       app.logger.info({ userId }, 'Calculating TOIL balance');
 
       try {
-        const events = await app.db
+        // Query for total balance (PENDING + APPROVED)
+        const totalEvents = await app.db
+          .select()
+          .from(schema.toilEvents)
+          .where(
+            and(
+              eq(schema.toilEvents.userId, userId),
+              eq(schema.toilEvents.status, 'PENDING')
+            )
+          );
+
+        const approvedEvents = await app.db
           .select()
           .from(schema.toilEvents)
           .where(
@@ -354,10 +368,14 @@ export function registerToilRoutes(app: App) {
             )
           );
 
+        // Combine for total balance (PENDING + APPROVED)
+        const allIncludedEvents = [...totalEvents, ...approvedEvents];
+
+        // Calculate total balance
         let addMinutes = 0;
         let takeMinutes = 0;
 
-        for (const event of events) {
+        for (const event of allIncludedEvents) {
           if (event.type === 'ADD') {
             addMinutes += event.minutes;
           } else if (event.type === 'TAKE') {
@@ -367,14 +385,39 @@ export function registerToilRoutes(app: App) {
 
         const balance = addMinutes - takeMinutes;
 
+        // Calculate available balance (APPROVED only)
+        let availableAddMinutes = 0;
+        let availableTakeMinutes = 0;
+
+        for (const event of approvedEvents) {
+          if (event.type === 'ADD') {
+            availableAddMinutes += event.minutes;
+          } else if (event.type === 'TAKE') {
+            availableTakeMinutes += event.minutes;
+          }
+        }
+
+        const availableBalance = availableAddMinutes - availableTakeMinutes;
+
         const response: BalanceResponse = {
           balance,
           addMinutes,
           takeMinutes,
+          availableBalance,
+          availableAddMinutes,
+          availableTakeMinutes,
         };
 
         app.logger.info(
-          { userId, balance, addMinutes, takeMinutes },
+          {
+            userId,
+            balance,
+            addMinutes,
+            takeMinutes,
+            availableBalance,
+            availableAddMinutes,
+            availableTakeMinutes,
+          },
           'TOIL balance calculated'
         );
         return response;
