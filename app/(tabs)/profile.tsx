@@ -8,6 +8,7 @@ import {
   useColorScheme,
   ActivityIndicator,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useTheme } from '@react-navigation/native';
@@ -22,6 +23,8 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
+
+  const themeColors = isDark ? colors.dark : colors.light;
 
   const { user, signOut } = useAuth();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
@@ -68,45 +71,45 @@ export default function ProfileScreen() {
   const roleIcon = userRole === 'manager' ? 'verified' : 'person';
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Stack.Screen
         options={{
           title: 'Profile',
           headerShown: true,
           headerStyle: {
-            backgroundColor: isDark ? colors.backgroundDark : colors.backgroundLight,
+            backgroundColor: themeColors.background,
           },
-          headerTintColor: colors.text,
+          headerTintColor: themeColors.text,
         }}
       />
 
       {loading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+          <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>
             Loading...
           </Text>
         </View>
       ) : (
-        <View style={styles.content}>
+        <ScrollView style={styles.content}>
           <View style={styles.profileHeader}>
             <View
               style={[
                 styles.avatarContainer,
-                { backgroundColor: isDark ? colors.cardDark : colors.cardLight },
+                { backgroundColor: themeColors.card },
               ]}
             >
               <IconSymbol
                 ios_icon_name="person.fill"
                 android_material_icon_name="person"
                 size={48}
-                color={colors.primary}
+                color={themeColors.primary}
               />
             </View>
-            <Text style={[styles.userName, { color: colors.text }]}>
+            <Text style={[styles.userName, { color: themeColors.text }]}>
               {userName}
             </Text>
-            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>
+            <Text style={[styles.userEmail, { color: themeColors.textSecondary }]}>
               {userEmail}
             </Text>
           </View>
@@ -116,8 +119,8 @@ export default function ProfileScreen() {
               style={[
                 styles.infoCard,
                 {
-                  backgroundColor: isDark ? colors.cardDark : colors.cardLight,
-                  borderColor: isDark ? colors.borderDark : colors.borderLight,
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
                 },
               ]}
             >
@@ -126,13 +129,13 @@ export default function ProfileScreen() {
                   ios_icon_name="person.badge.shield.checkmark.fill"
                   android_material_icon_name={roleIcon}
                   size={24}
-                  color={userRole === 'manager' ? colors.success : colors.primary}
+                  color={userRole === 'manager' ? themeColors.success : themeColors.primary}
                 />
                 <View style={styles.infoText}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                  <Text style={[styles.infoLabel, { color: themeColors.textSecondary }]}>
                     Role
                   </Text>
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
+                  <Text style={[styles.infoValue, { color: themeColors.text }]}>
                     {roleDisplay}
                   </Text>
                 </View>
@@ -144,8 +147,8 @@ export default function ProfileScreen() {
                 style={[
                   styles.managerNote,
                   {
-                    backgroundColor: isDark ? colors.cardDark : colors.cardLight,
-                    borderColor: colors.success,
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.success,
                   },
                 ]}
               >
@@ -153,9 +156,9 @@ export default function ProfileScreen() {
                   ios_icon_name="checkmark.shield.fill"
                   android_material_icon_name="verified"
                   size={20}
-                  color={colors.success}
+                  color={themeColors.success}
                 />
-                <Text style={[styles.managerNoteText, { color: colors.text }]}>
+                <Text style={[styles.managerNoteText, { color: themeColors.text }]}>
                   You have manager permissions to approve TOIL requests
                 </Text>
               </View>
@@ -168,8 +171,8 @@ export default function ProfileScreen() {
                 style={[
                   styles.adminButton,
                   {
-                    backgroundColor: isDark ? colors.cardDark : colors.cardLight,
-                    borderColor: colors.primary,
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.primary,
                   },
                 ]}
                 onPress={handleAdminPanel}
@@ -178,9 +181,9 @@ export default function ProfileScreen() {
                   ios_icon_name="person.badge.shield.checkmark.fill"
                   android_material_icon_name="admin-panel-settings"
                   size={24}
-                  color={colors.primary}
+                  color={themeColors.primary}
                 />
-                <Text style={[styles.adminButtonText, { color: colors.primary }]}>
+                <Text style={[styles.adminButtonText, { color: themeColors.primary }]}>
                   Admin Panel
                 </Text>
               </TouchableOpacity>
@@ -190,8 +193,8 @@ export default function ProfileScreen() {
               style={[
                 styles.signOutButton,
                 {
-                  backgroundColor: isDark ? colors.cardDark : colors.cardLight,
-                  borderColor: colors.error,
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.error,
                 },
               ]}
               onPress={() => setShowSignOutModal(true)}
@@ -200,14 +203,14 @@ export default function ProfileScreen() {
                 ios_icon_name="rectangle.portrait.and.arrow.right"
                 android_material_icon_name="logout"
                 size={24}
-                color={colors.error}
+                color={themeColors.error}
               />
-              <Text style={[styles.signOutText, { color: colors.error }]}>
+              <Text style={[styles.signOutText, { color: themeColors.error }]}>
                 Sign Out
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       )}
 
       <ConfirmModal
@@ -256,6 +259,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   userName: {
     fontSize: 24,
@@ -274,6 +282,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   infoRow: {
     flexDirection: 'row',
@@ -308,6 +321,7 @@ const styles = StyleSheet.create({
   actions: {
     paddingHorizontal: 20,
     gap: 12,
+    paddingBottom: 100,
   },
   adminButton: {
     flexDirection: 'row',
@@ -318,6 +332,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   adminButtonText: {
     fontSize: 18,
@@ -332,6 +351,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   signOutText: {
     fontSize: 18,
