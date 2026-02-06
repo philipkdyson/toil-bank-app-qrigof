@@ -1,3 +1,4 @@
+
 # TOIL Bank
 
 A Time Off In Lieu (TOIL) tracking app with manager approval workflow.
@@ -8,6 +9,7 @@ A Time Off In Lieu (TOIL) tracking app with manager approval workflow.
 - ✅ Manager approval system for TOIL requests
 - ✅ Real-time balance calculation (only approved events count)
 - ✅ Role-based access control (User/Manager)
+- ✅ Admin panel for promoting users to manager
 - ✅ Speech-to-text for notes
 - ✅ Offline-first with backend sync
 - ✅ Cross-platform (iOS, Android, Web)
@@ -45,6 +47,11 @@ A Time Off In Lieu (TOIL) tracking app with manager approval workflow.
 7. **GET /api/toil/balance** - Get TOIL balance
    - Only counts APPROVED events
    - Used in: useToilData hook
+
+8. **PUT /api/admin/promote-user** - Promote user to manager role
+   - Body: `{ email: string, role: 'user' | 'manager' }`
+   - Returns: `{ success: true, user: { id, email, name, role } }`
+   - Used in: Admin panel
 
 ## Testing the Manager Approval System
 
@@ -89,25 +96,39 @@ A Time Off In Lieu (TOIL) tracking app with manager approval workflow.
    - See role: "Team Member"
    - No manager permissions note
 
-#### Scenario 2: Manager Flow
+#### Scenario 2: Promoting Users to Manager
 
-**Note**: To test manager functionality, you need to promote a user to manager role. This requires:
-- Direct database access, OR
-- A manager user already exists, OR
-- Use the PUT /api/user/role endpoint (if you have admin access)
+**NEW**: The app now includes an Admin Panel for promoting users!
 
-1. **Promote User to Manager** (Database)
-   ```sql
-   UPDATE user SET role = 'manager' WHERE email = 'manager@example.com';
-   ```
+1. **Access Admin Panel**
+   - Navigate to `/admin` in your browser, OR
+   - If you're already a manager, go to Profile tab and tap "Admin Panel" button
 
-2. **Sign In as Manager**
+2. **Promote a User**
+   - Enter the user's email address (e.g., `philipkdyson@gmail.com`)
+   - Select target role: "Manager" or "User"
+   - Tap "Update Role" button
+   - Success message shows: "✓ [Name] ([email]) promoted to Manager"
+
+3. **Quick Promotion Example**
+   - To promote `philipkdyson@gmail.com` to manager:
+     1. Open the app
+     2. Navigate to `/admin` (or use Admin Panel button if you're a manager)
+     3. Enter: `philipkdyson@gmail.com`
+     4. Select: "Manager"
+     5. Tap "Update Role"
+     6. Done! The user is now a manager
+
+#### Scenario 3: Manager Flow
+
+1. **Sign In as Manager**
    - Sign in with manager account
    - Go to Profile tab
    - See role: "Manager"
    - See green badge: "You have manager permissions to approve TOIL requests"
+   - See "Admin Panel" button
 
-3. **View Pending Approvals**
+2. **View Pending Approvals**
    - Go to Approvals tab
    - See list of pending TOIL requests from all users
    - Each request shows:
@@ -116,19 +137,19 @@ A Time Off In Lieu (TOIL) tracking app with manager approval workflow.
      - Optional note
      - Approve/Reject buttons
 
-4. **Approve a Request**
+3. **Approve a Request**
    - Tap "Approve" button on a pending event
    - Event is removed from pending list
    - User's balance is updated (if they refresh)
    - Event status changes to APPROVED
 
-5. **Reject a Request**
+4. **Reject a Request**
    - Tap "Reject" button on a pending event
    - Event is removed from pending list
    - User's balance is NOT affected
    - Event status changes to REJECTED
 
-#### Scenario 3: Balance Calculation
+#### Scenario 4: Balance Calculation
 
 1. **Create Multiple Events**
    - User creates: +2h (PENDING)
@@ -161,6 +182,8 @@ A Time Off In Lieu (TOIL) tracking app with manager approval workflow.
 - [ ] User can view history with status badges
 - [ ] User balance only counts APPROVED events
 - [ ] Regular user sees "Manager Access Only" in Approvals tab
+- [ ] Admin panel can promote users to manager
+- [ ] Manager sees "Admin Panel" button in Profile
 - [ ] Manager can view pending events from all users
 - [ ] Manager can approve events
 - [ ] Manager can reject events
@@ -171,9 +194,34 @@ A Time Off In Lieu (TOIL) tracking app with manager approval workflow.
 - [ ] Offline mode works (local storage)
 - [ ] Backend sync works when online
 
+### Quick Start: Promoting Your Account
+
+To promote `philipkdyson@gmail.com` to manager:
+
+1. **Option A: Use the Admin Panel (Easiest)**
+   - Open the app in your browser
+   - Navigate to: `http://localhost:8081/admin` (or your app URL + `/admin`)
+   - Enter email: `philipkdyson@gmail.com`
+   - Select role: "Manager"
+   - Tap "Update Role"
+
+2. **Option B: Direct API Call**
+   ```bash
+   curl -X PUT https://gbdn4gw2tf38dxa995db3qban2afxa7x.app.specular.dev/api/admin/promote-user \
+     -H "Content-Type: application/json" \
+     -d '{"email":"philipkdyson@gmail.com","role":"manager"}'
+   ```
+
+3. **Option C: Database (Advanced)**
+   ```sql
+   UPDATE user SET role = 'manager' WHERE email = 'philipkdyson@gmail.com';
+   ```
+
+After promotion, sign out and sign back in to see the changes reflected in the app.
+
 ### Known Limitations
 
-1. **No Manager Promotion UI**: Currently, users must be promoted to manager via database or API
+1. **Admin Panel Access**: Currently, the admin panel is accessible to anyone via direct URL. In production, this should be protected with admin authentication.
 2. **No Event Editing After Approval**: Once approved/rejected, events cannot be edited
 3. **No Approval Notifications**: Users are not notified when their events are approved/rejected
 
@@ -236,6 +284,7 @@ app/
 │   ├── approvals.tsx           # Manager approval screen
 │   ├── history.tsx             # TOIL history screen
 │   └── profile.tsx             # User profile screen
+├── admin.tsx                   # Admin panel for user promotion
 ├── auth.tsx                    # Authentication screen
 ├── auth-popup.tsx              # OAuth popup (web)
 ├── auth-callback.tsx           # OAuth callback handler

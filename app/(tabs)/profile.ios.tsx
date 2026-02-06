@@ -56,6 +56,11 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleAdminPanel = () => {
+    console.log('ProfileScreen: Navigating to admin panel');
+    router.push('/admin');
+  };
+
   const userName = user?.name || 'User';
   const userEmail = user?.email || '';
   const roleDisplay = userRole === 'manager' ? 'Manager' : 'Team Member';
@@ -157,6 +162,29 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.actions}>
+            {userRole === 'manager' && (
+              <TouchableOpacity
+                style={[
+                  styles.adminButton,
+                  {
+                    backgroundColor: isDark ? colors.cardDark : colors.cardLight,
+                    borderColor: colors.primary,
+                  },
+                ]}
+                onPress={handleAdminPanel}
+              >
+                <IconSymbol
+                  ios_icon_name="person.badge.shield.checkmark.fill"
+                  android_material_icon_name="admin-panel-settings"
+                  size={24}
+                  color={colors.primary}
+                />
+                <Text style={[styles.adminButtonText, { color: colors.primary }]}>
+                  Admin Panel
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[
                 styles.signOutButton,
@@ -277,6 +305,21 @@ const styles = StyleSheet.create({
   },
   actions: {
     paddingHorizontal: 20,
+    gap: 12,
+  },
+  adminButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  adminButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   signOutButton: {
     flexDirection: 'row',
