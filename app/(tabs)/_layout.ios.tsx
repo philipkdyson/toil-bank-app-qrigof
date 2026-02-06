@@ -1,26 +1,61 @@
 
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
+import { HapticTab } from '@/components/HapticTab';
+import { IconSymbol } from '@/components/IconSymbol';
+import TabBarBackground from '@/components/ui/TabBarBackground';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
+  const colorScheme = useColorScheme();
+
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="(home)">
-        <Label>Log</Label>
-        <Icon sf={{ default: 'plus.circle', selected: 'plus.circle.fill' }} drawable="add-circle" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="history">
-        <Label>History</Label>
-        <Icon sf={{ default: 'clock', selected: 'clock.fill' }} drawable="history" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="approvals">
-        <Label>Approvals</Label>
-        <Icon sf={{ default: 'checkmark.circle', selected: 'checkmark.circle.fill' }} drawable="check-circle" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Label>Profile</Label>
-        <Icon sf={{ default: 'person.circle', selected: 'person.circle.fill' }} drawable="person" />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        headerShown: false,
+        tabBarButton: HapticTab,
+        tabBarBackground: TabBarBackground,
+        tabBarStyle: {
+          position: 'absolute',
+          height: 88,
+          paddingBottom: 32,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          marginTop: 2,
+        },
+      }}>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Log',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="plus" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="clock" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="approvals"
+        options={{
+          title: 'Approvals',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="checkmark" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person" color={color} />,
+        }}
+      />
+    </Tabs>
   );
 }

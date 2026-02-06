@@ -1,52 +1,66 @@
 
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { Stack } from 'expo-router';
-import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
+import { Platform } from 'react-native';
+import { HapticTab } from '@/components/HapticTab';
+import { IconSymbol } from '@/components/IconSymbol';
+import TabBarBackground from '@/components/ui/TabBarBackground';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
-  // Define the tabs configuration
-  const tabs: TabBarItem[] = [
-    {
-      name: '(home)',
-      route: '/(tabs)/(home)/',
-      icon: 'add-circle',
-      label: 'Log',
-    },
-    {
-      name: 'history',
-      route: '/(tabs)/history',
-      icon: 'history',
-      label: 'History',
-    },
-    {
-      name: 'approvals',
-      route: '/(tabs)/approvals',
-      icon: 'check-circle',
-      label: 'Approvals',
-    },
-    {
-      name: 'profile',
-      route: '/(tabs)/profile',
-      icon: 'person',
-      label: 'Profile',
-    },
-  ];
+  const colorScheme = useColorScheme();
 
-  // For Android and Web, use Stack navigation with custom floating tab bar
   return (
-    <>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: 'none', // Remove fade animation to prevent black screen flash
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        headerShown: false,
+        tabBarButton: HapticTab,
+        tabBarBackground: TabBarBackground,
+        tabBarStyle: Platform.select({
+          ios: {
+            position: 'absolute',
+          },
+          default: {
+            height: 60,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+        }),
+        tabBarLabelStyle: {
+          fontSize: 11,
+          marginTop: 2,
+        },
+      }}>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Log',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="plus" color={color} />,
         }}
-      >
-        <Stack.Screen key="home" name="(home)" />
-        <Stack.Screen key="history" name="history" />
-        <Stack.Screen key="approvals" name="approvals" />
-        <Stack.Screen key="profile" name="profile" />
-      </Stack>
-      <FloatingTabBar tabs={tabs} />
-    </>
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="clock" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="approvals"
+        options={{
+          title: 'Approvals',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="checkmark" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person" color={color} />,
+        }}
+      />
+    </Tabs>
   );
 }
