@@ -20,9 +20,12 @@ export interface PendingToilEvent extends ToilEvent {
 }
 
 export interface ToilBalance {
-  balance: number; // Total minutes (can be negative)
+  balance: number; // Total minutes (can be negative) - ALL items
   addMinutes: number;
   takeMinutes: number;
+  availableBalance: number; // Available balance - APPROVED items only
+  availableAddMinutes: number;
+  availableTakeMinutes: number;
 }
 
 // Helper function to format minutes to "Xh Ym" display

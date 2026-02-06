@@ -14,6 +14,9 @@ export function useToilData() {
     balance: 0,
     addMinutes: 0,
     takeMinutes: 0,
+    availableBalance: 0,
+    availableAddMinutes: 0,
+    availableTakeMinutes: 0,
   });
   const [loading, setLoading] = useState(true);
   const [lastAction, setLastAction] = useState<'ADD' | 'TAKE'>('ADD');
@@ -66,23 +69,49 @@ export function useToilData() {
     }
   }, []);
 
-  // Calculate balance from events (only count APPROVED events)
+  // Calculate balance from events - both total and available (approved only)
   const calculateBalance = (eventList: ToilEvent[]) => {
-    // Only count APPROVED events for balance calculation
-    const approvedEvents = eventList.filter(e => e.status === 'APPROVED');
-    
-    const addMinutes = approvedEvents
+    // Calculate TOTAL balance (all events regardless of status)
+    const totalAddMinutes = eventList
       .filter(e => e.type === 'ADD')
       .reduce((sum, e) => sum + e.minutes, 0);
     
-    const takeMinutes = approvedEvents
+    const totalTakeMinutes = eventList
       .filter(e => e.type === 'TAKE')
       .reduce((sum, e) => sum + e.minutes, 0);
     
-    const balance = addMinutes - takeMinutes;
+    const totalBalance = totalAddMinutes - totalTakeMinutes;
     
-    setBalance({ balance, addMinutes, takeMinutes });
-    console.log('Balance calculated (APPROVED only):', { balance, addMinutes, takeMinutes });
+    // Calculate AVAILABLE balance (only APPROVED events)
+    const approvedEvents = eventList.filter(e => e.status === 'APPROVED');
+    
+    const availableAddMinutes = approvedEvents
+      .filter(e => e.type === 'ADD')
+      .reduce((sum, e) => sum + e.minutes, 0);
+    
+    const availableTakeMinutes = approvedEvents
+      .filter(e => e.type === 'TAKE')
+      .reduce((sum, e) => sum + e.minutes, 0);
+    
+    const availableBalance = availableAddMinutes - availableTakeMinutes;
+    
+    setBalance({ 
+      balance: totalBalance, 
+      addMinutes: totalAddMinutes, 
+      takeMinutes: totalTakeMinutes,
+      availableBalance,
+      availableAddMinutes,
+      availableTakeMinutes,
+    });
+    
+    console.log('Balance calculated:', { 
+      total: totalBalance, 
+      available: availableBalance,
+      totalAdd: totalAddMinutes,
+      totalTake: totalTakeMinutes,
+      availableAdd: availableAddMinutes,
+      availableTake: availableTakeMinutes,
+    });
   };
 
   // Save events to local storage

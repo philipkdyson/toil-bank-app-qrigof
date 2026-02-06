@@ -81,7 +81,8 @@ export default function LoggingScreen() {
   // Quick time buttons (in minutes)
   const quickTimes = [15, 30, 45, 60, 90, 120];
 
-  const balanceDisplay = formatMinutes(balance.balance);
+  const totalBalanceDisplay = formatMinutes(balance.balance);
+  const availableBalanceDisplay = formatMinutes(balance.availableBalance);
   const selectedDisplay = formatMinutes(selectedMinutes);
 
   const handleQuickTimeSelect = (minutes: number) => {
@@ -187,7 +188,7 @@ export default function LoggingScreen() {
   const buttonLabel = `${actionTypeText} ${selectedDisplay}`;
   const buttonColor = actionType === 'ADD' ? themeColors.success : themeColors.warning;
 
-  const snackbarMessage = `TOIL updated · Balance ${balanceDisplay}`;
+  const snackbarMessage = `TOIL updated · Available ${availableBalanceDisplay}`;
   const micIconColor = isListening ? themeColors.success : themeColors.primary;
 
   return (
@@ -206,11 +207,19 @@ export default function LoggingScreen() {
           {/* Header with Balance */}
           <View style={styles.header}>
             <Text style={[styles.headerTitle, { color: themeColors.textSecondary }]}>
-              TOIL Balance
+              Total Balance
             </Text>
             <Text style={[styles.balanceText, { color: themeColors.text }]}>
-              {balanceDisplay}
+              {totalBalanceDisplay}
             </Text>
+            <View style={styles.availableBalanceContainer}>
+              <Text style={[styles.availableBalanceLabel, { color: themeColors.textSecondary }]}>
+                Available Balance
+              </Text>
+              <Text style={[styles.availableBalanceText, { color: themeColors.success }]}>
+                {availableBalanceDisplay}
+              </Text>
+            </View>
           </View>
 
           {/* Segmented Control - ADD/TAKE */}
@@ -459,6 +468,26 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: '700',
     letterSpacing: -1,
+  },
+  availableBalanceContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)',
+    width: '100%',
+  },
+  availableBalanceLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  availableBalanceText: {
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   segmentedControl: {
     flexDirection: 'row',
