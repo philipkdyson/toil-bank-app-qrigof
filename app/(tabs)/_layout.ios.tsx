@@ -13,6 +13,14 @@ export default function TabLayout() {
         <Label>History</Label>
         <Icon sf={{ default: 'clock', selected: 'clock.fill' }} drawable="history" />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="approvals">
+        <Label>Approvals</Label>
+        <Icon sf={{ default: 'checkmark.circle', selected: 'checkmark.circle.fill' }} drawable="check-circle" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile">
+        <Label>Profile</Label>
+        <Icon sf={{ default: 'person.circle', selected: 'person.circle.fill' }} drawable="person" />
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }

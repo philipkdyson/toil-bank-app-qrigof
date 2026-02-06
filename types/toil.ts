@@ -7,6 +7,16 @@ export interface ToilEvent {
   minutes: number; // Always positive integer
   note?: string;
   created_at: string; // ISO 8601 format
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approved_by?: string;
+  approval_timestamp?: string;
+}
+
+// Pending event with user details (for managers)
+export interface PendingToilEvent extends ToilEvent {
+  user_id: string;
+  user_name: string;
+  user_email: string;
 }
 
 export interface ToilBalance {

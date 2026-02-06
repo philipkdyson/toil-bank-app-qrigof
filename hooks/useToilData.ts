@@ -66,20 +66,23 @@ export function useToilData() {
     }
   }, []);
 
-  // Calculate balance from events
+  // Calculate balance from events (only count APPROVED events)
   const calculateBalance = (eventList: ToilEvent[]) => {
-    const addMinutes = eventList
+    // Only count APPROVED events for balance calculation
+    const approvedEvents = eventList.filter(e => e.status === 'APPROVED');
+    
+    const addMinutes = approvedEvents
       .filter(e => e.type === 'ADD')
       .reduce((sum, e) => sum + e.minutes, 0);
     
-    const takeMinutes = eventList
+    const takeMinutes = approvedEvents
       .filter(e => e.type === 'TAKE')
       .reduce((sum, e) => sum + e.minutes, 0);
     
     const balance = addMinutes - takeMinutes;
     
     setBalance({ balance, addMinutes, takeMinutes });
-    console.log('Balance calculated:', { balance, addMinutes, takeMinutes });
+    console.log('Balance calculated (APPROVED only):', { balance, addMinutes, takeMinutes });
   };
 
   // Save events to local storage
@@ -106,6 +109,7 @@ export function useToilData() {
       minutes,
       note,
       created_at: timestamp,
+      status: 'PENDING', // New events start as PENDING
     };
     
     const updatedEvents = [tempEvent, ...events];

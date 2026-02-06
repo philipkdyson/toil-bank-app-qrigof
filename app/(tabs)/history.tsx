@@ -76,6 +76,21 @@ export default function HistoryScreen() {
     const prefix = item.type === 'ADD' ? '+' : '−';
     const displayMinutes = formatMinutes(item.minutes);
     const eventColor = item.type === 'ADD' ? themeColors.success : themeColors.warning;
+    
+    const statusText = item.status || 'PENDING';
+    let statusColor = themeColors.textSecondary;
+    let statusIconIos = 'clock.fill';
+    let statusIconAndroid = 'schedule';
+    
+    if (statusText === 'APPROVED') {
+      statusColor = themeColors.success;
+      statusIconIos = 'checkmark.circle.fill';
+      statusIconAndroid = 'check-circle';
+    } else if (statusText === 'REJECTED') {
+      statusColor = themeColors.error;
+      statusIconIos = 'xmark.circle.fill';
+      statusIconAndroid = 'cancel';
+    }
 
     return (
       <TouchableOpacity
@@ -102,6 +117,17 @@ export default function HistoryScreen() {
               {item.note}
             </Text>
           )}
+          <View style={styles.statusBadge}>
+            <IconSymbol
+              ios_icon_name={statusIconIos}
+              android_material_icon_name={statusIconAndroid}
+              size={14}
+              color={statusColor}
+            />
+            <Text style={[styles.statusText, { color: statusColor }]}>
+              {statusText}
+            </Text>
+          </View>
         </View>
         <View style={styles.eventRight}>
           {eventIsToday ? (
@@ -327,5 +353,17 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 16,
     textAlign: 'center',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
