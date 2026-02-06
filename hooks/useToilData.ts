@@ -69,14 +69,18 @@ export function useToilData() {
     }
   }, []);
 
-  // Calculate balance from events - both total and available (approved only)
+  // Calculate balance from events
+  // Total Balance: PENDING + APPROVED only (excludes REJECTED)
+  // Available Balance: APPROVED only
   const calculateBalance = (eventList: ToilEvent[]) => {
-    // Calculate TOTAL balance (all events regardless of status)
-    const totalAddMinutes = eventList
+    // Calculate TOTAL balance (PENDING + APPROVED only, excludes REJECTED)
+    const totalEvents = eventList.filter(e => e.status === 'PENDING' || e.status === 'APPROVED');
+    
+    const totalAddMinutes = totalEvents
       .filter(e => e.type === 'ADD')
       .reduce((sum, e) => sum + e.minutes, 0);
     
-    const totalTakeMinutes = eventList
+    const totalTakeMinutes = totalEvents
       .filter(e => e.type === 'TAKE')
       .reduce((sum, e) => sum + e.minutes, 0);
     
@@ -111,6 +115,8 @@ export function useToilData() {
       totalTake: totalTakeMinutes,
       availableAdd: availableAddMinutes,
       availableTake: availableTakeMinutes,
+      totalEventsCount: totalEvents.length,
+      approvedEventsCount: approvedEvents.length,
     });
   };
 
