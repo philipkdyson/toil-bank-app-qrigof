@@ -16,7 +16,7 @@ import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmModal } from '@/components/IconCircle';
-import { authenticatedGet } from '@/utils/api';
+import { authenticatedGet, authenticatedPut } from '@/utils/api';
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
@@ -30,6 +30,7 @@ export default function ProfileScreen() {
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [userRole, setUserRole] = useState<string>('user');
   const [loading, setLoading] = useState(true);
+  const [toggleLoading, setToggleLoading] = useState(false);
 
   useEffect(() => {
     console.log('ProfileScreen: Loading user role');
@@ -47,6 +48,26 @@ export default function ProfileScreen() {
       setUserRole('user');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleRole = async () => {
+    setToggleLoading(true);
+    try {
+      console.log('ProfileScreen: Toggling user role from', userRole);
+      const response = await authenticatedPut<{ success: boolean; role: string }>(
+        '/api/user/toggle-role',
+        {}
+      );
+      
+      if (response.success) {
+        setUserRole(response.role);
+        console.log('ProfileScreen: Role toggled successfully to', response.role);
+      }
+    } catch (error) {
+      console.error('ProfileScreen: Failed to toggle role:', error);
+    } finally {
+      setToggleLoading(false);
     }
   };
 
@@ -69,6 +90,8 @@ export default function ProfileScreen() {
   const userEmail = user?.email || '';
   const roleDisplay = userRole === 'manager' ? 'Manager' : 'Team Member';
   const roleIcon = userRole === 'manager' ? 'verified' : 'person';
+  const toggleButtonText = userRole === 'manager' ? 'Switch to User' : 'Switch to Manager';
+  const toggleButtonIcon = userRole === 'manager' ? 'person' : 'verified';
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -166,6 +189,34 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.actions}>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                {
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.primary,
+                },
+              ]}
+              onPress={handleToggleRole}
+              disabled={toggleLoading}
+            >
+              {toggleLoading ? (
+                <ActivityIndicator size="small" color={themeColors.primary} />
+              ) : (
+                <>
+                  <IconSymbol
+                    ios_icon_name="arrow.triangle.2.circlepath"
+                    android_material_icon_name={toggleButtonIcon}
+                    size={24}
+                    color={themeColors.primary}
+                  />
+                  <Text style={[styles.toggleButtonText, { color: themeColors.primary }]}>
+                    {toggleButtonText}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
             {userRole === 'manager' && (
               <TouchableOpacity
                 style={[
@@ -322,6 +373,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 12,
     paddingBottom: 100,
+  },
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  toggleButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   adminButton: {
     flexDirection: 'row',
