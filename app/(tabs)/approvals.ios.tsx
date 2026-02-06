@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -63,7 +63,9 @@ export default function ApprovalsScreen() {
       console.log('ApprovalsScreen: Loading pending events...');
       const events = await authenticatedGet<PendingToilEvent[]>('/api/toil/events/pending');
       console.log('ApprovalsScreen: Received events:', events.length, 'events');
-      console.log('ApprovalsScreen: First event sample:', events[0]);
+      if (events.length > 0) {
+        console.log('ApprovalsScreen: First event sample:', events[0]);
+      }
       
       setPendingEvents(events);
       console.log('ApprovalsScreen: State updated with', events.length, 'events');
@@ -112,8 +114,9 @@ export default function ApprovalsScreen() {
     }
   };
 
-  const groupEventsByDate = (): EventSection[] => {
-    console.log('ApprovalsScreen: Grouping', pendingEvents.length, 'events by date');
+  // Use useMemo to properly compute sections when pendingEvents changes
+  const sections = useMemo((): EventSection[] => {
+    console.log('ApprovalsScreen: Computing sections for', pendingEvents.length, 'events');
     const grouped = new Map<string, PendingToilEvent[]>();
 
     pendingEvents.forEach(event => {
@@ -124,14 +127,14 @@ export default function ApprovalsScreen() {
       grouped.get(dateGroup)!.push(event);
     });
 
-    const sections: EventSection[] = [];
+    const result: EventSection[] = [];
     grouped.forEach((data, title) => {
-      sections.push({ title, data });
+      result.push({ title, data });
     });
 
-    console.log('ApprovalsScreen: Created', sections.length, 'sections');
-    return sections;
-  };
+    console.log('ApprovalsScreen: Created', result.length, 'sections');
+    return result;
+  }, [pendingEvents]);
 
   const renderEventItem = ({ item }: { item: PendingToilEvent }) => {
     const isProcessing = processingId === item.id;
@@ -245,10 +248,10 @@ export default function ApprovalsScreen() {
     loading,
     isManager,
     pendingEventsCount: pendingEvents.length,
+    sectionsCount: sections.length,
     error,
   });
 
-  const sections = groupEventsByDate();
   const pendingCount = pendingEvents.length;
   const headerTitle = isManager ? 'Pending Approvals' : 'Approvals';
 
